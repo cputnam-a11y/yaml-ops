@@ -17,19 +17,12 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CodecTest {
-    // Constructors, equals and hashcode are auto-generated
-    // TODO: switch to records in java 14+
-
     private enum Day {
         TUESDAY("tuesday", TuesdayData.CODEC),
         WEDNESDAY("wednesday", WednesdayData.CODEC),
@@ -153,7 +146,7 @@ public class CodecTest {
         }
     }
 
-    private static final class TestData {
+    private record  TestData(float a, double b, byte c, short d, int e, long f, boolean g, String h, List<String> i, Map<String, String> j, List<Pair<String, String>> k, DayData dayData) {
         public static final Codec<TestData> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.FLOAT.fieldOf("a").forGetter(d -> d.a),
                 Codec.DOUBLE.fieldOf("b").forGetter(d -> d.b),
@@ -168,35 +161,6 @@ public class CodecTest {
                 Codec.compoundList(Codec.STRING, Codec.STRING).fieldOf("k").forGetter(d -> d.k),
                 DayData.CODEC.fieldOf("day_data").forGetter(d -> d.dayData)
         ).apply(i, TestData::new));
-
-        private final float a;
-        private final double b;
-        private final byte c;
-        private final short d;
-        private final int e;
-        private final long f;
-        private final boolean g;
-        private final String h;
-        private final List<String> i;
-        private final Map<String, String> j;
-        private final List<Pair<String, String>> k;
-
-        private final DayData dayData;
-
-        private TestData(final float a, final double b, final byte c, final short d, final int e, final long f, final boolean g, final String h, final List<String> i, final Map<String, String> j, final List<Pair<String, String>> k, final DayData dayData) {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-            this.d = d;
-            this.e = e;
-            this.f = f;
-            this.g = g;
-            this.h = h;
-            this.i = i;
-            this.j = j;
-            this.k = k;
-            this.dayData = dayData;
-        }
 
         @Override
         public boolean equals(final Object o) {
@@ -216,7 +180,9 @@ public class CodecTest {
                     g == testData.g &&
                     h.equals(testData.h) &&
                     i.equals(testData.i) &&
-                    j.equals(testData.j) &&
+                    j.size() == testData.j.size() &&
+                    testData.j.keySet().containsAll(j.keySet()) &&
+                    testData.j.entrySet().stream().allMatch(e -> Objects.equals(testData.j.get(e.getKey()), e.getValue())) &&
                     k.equals(testData.k) &&
                     dayData.equals(testData.dayData);
         }
