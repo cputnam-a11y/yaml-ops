@@ -4,7 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.MapLike;
-import it.unimi.dsi.fastutil.Hash;
+import com.thiakil.yamlops.util.NodeStrategy;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.composer.Composer;
@@ -19,6 +19,9 @@ import org.yaml.snakeyaml.serializer.Serializer;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,6 +31,8 @@ public class SnakeYamlOps implements DynamicOps<Node> {
     static {
         DEFAULT_OPTIONS.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
     }
+    public static final Collector<NodeTuple, ?, Map<Node, Node>> NODE_TUPLE_COLLECTOR = Collectors.toMap(NodeTuple::getKeyNode, NodeTuple::getValueNode, (m1, m2) -> m2, () -> new Object2ObjectOpenCustomHashMap<>(NodeStrategy.INSTANCE));
+
     private final Representer representer;
     private final Node EMPTY;
     private final MyConstructor constructor = new MyConstructor();
@@ -52,10 +57,10 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     @Override
     public <U> U convertTo(DynamicOps<U> outOps, Node input) {
-        if (input instanceof MappingNode mappingNode) {
+        if (input instanceof MappingNode) {
             return convertMap(outOps, input);
         }
-        if (input instanceof SequenceNode sequenceNode) {
+        if (input instanceof SequenceNode) {
             return convertList(outOps, input);
         }
         if (input instanceof ScalarNode scalarNode) {
@@ -81,7 +86,7 @@ public class SnakeYamlOps implements DynamicOps<Node> {
         if (input instanceof SequenceNode sequenceNode) {
             return DataResult.success(sequenceNode);
         }
-        if (YAML_NODE_STRATEGY.equals(EMPTY, input)) {
+        if (NodeStrategy.INSTANCE.equals(EMPTY, input)) {
             return DataResult.success(new SequenceNode(Tag.MAP, Collections.emptyList(), dumperOptions.getDefaultFlowStyle()));
         }
         return DataResult.error(()->"Not a sequence: "+input);
@@ -91,7 +96,7 @@ public class SnakeYamlOps implements DynamicOps<Node> {
         if (input instanceof MappingNode mappingNode) {
             return DataResult.success(mappingNode);
         }
-        if (YAML_NODE_STRATEGY.equals(EMPTY, input)) {
+        if (NodeStrategy.INSTANCE.equals(EMPTY, input)) {
             return DataResult.success(new MappingNode(Tag.MAP, Collections.emptyList(), dumperOptions.getDefaultFlowStyle()));
         }
         return DataResult.error(()->"Not a MappingNode: "+input);
@@ -117,36 +122,59 @@ public class SnakeYamlOps implements DynamicOps<Node> {
         return representer.represent(value);
     }
 
-    @Override
-    public DataResult<Node> mergeToList(Node list, Node value) {
+    private DataResult<Node> mergeToList(Node list, Consumer<List<Node>> additionalNodes) {
         return getSequence(list)
                 .map(SequenceNode::getValue)
                 .map(existing -> {
                     List<Node> newValues = new ArrayList<>(existing);
-                    newValues.add(value);
+                    additionalNodes.accept(newValues);
                     return new SequenceNode(Tag.SEQ, newValues, dumperOptions.getDefaultFlowStyle());
                 });
     }
 
     @Override
-    public DataResult<Node> mergeToMap(Node map, Node key, Node value) {
+    public DataResult<Node> mergeToList(Node list, Node value) {
+        return mergeToList(list, newValues->newValues.add(value));
+    }
+
+    @Override
+    public DataResult<Node> mergeToList(Node list, List<Node> values) {
+        return mergeToList(list, newValues->newValues.addAll(values));
+    }
+
+    private DataResult<Node> mergeToMap(Node map, Consumer<BiConsumer<Node, Node>> valueConsumer) {
         DataResult<Map<Node, Node>> existingValues;
         DumperOptions.FlowStyle flowStyle;
-        if (YAML_NODE_STRATEGY.equals(EMPTY, map)) {
-            existingValues = DataResult.success(new HashMap<>());
+        if (NodeStrategy.INSTANCE.equals(EMPTY, map)) {
+            existingValues = DataResult.success(new LinkedHashMap<>());
             flowStyle = dumperOptions.getDefaultFlowStyle();
         } else {
             DataResult<MappingNode> yMap = getYMap(map);
             existingValues = yMap.map(mappingNode ->
                     mappingNode.getValue().stream()
-                            .collect(Collectors.toMap(NodeTuple::getKeyNode, NodeTuple::getValueNode, (m1,m2)->m1, LinkedHashMap::new))
+                            .collect(NODE_TUPLE_COLLECTOR)
             );
             flowStyle = yMap.result().map(MappingNode::getFlowStyle).orElse(dumperOptions.getDefaultFlowStyle());
         }
         return existingValues.map(m->{
-            m.put(key, value);
+            valueConsumer.accept(m::put);
             return new MappingNode(Tag.MAP, m.entrySet().stream().map(e->new NodeTuple(e.getKey(), e.getValue())).toList(), flowStyle);
         });
+    }
+
+    @Override
+    public DataResult<Node> mergeToMap(Node map, Node key, Node value) {
+        return mergeToMap(map, consumer->consumer.accept(key, value));
+    }
+
+    @Override
+    public DataResult<Node> mergeToMap(Node map, MapLike<Node> values) {
+        return mergeToMap(map, consumer -> values.entries().forEach(e -> consumer.accept(e.getFirst(), e.getSecond())));
+    }
+
+    @Override
+    public DataResult<Node> mergeToMap(Node map, Map<Node, Node> values) {
+        return mergeToMap(map, values::forEach);
     }
 
     @Override
@@ -189,12 +217,7 @@ public class SnakeYamlOps implements DynamicOps<Node> {
     @Override
     public DataResult<MapLike<Node>> getMap(Node input) {
         return getYMap(input).map(m-> MapLike.forMap(
-                m.getValue().stream().collect(Collectors.toMap(
-                        NodeTuple::getKeyNode,
-                        NodeTuple::getValueNode,
-                        (a,b)->b,
-                        ()->new Object2ObjectOpenCustomHashMap<>(YAML_NODE_STRATEGY)
-                    )
+                m.getValue().stream().collect(NODE_TUPLE_COLLECTOR
                 ),
             this)
         );
@@ -233,43 +256,4 @@ public class SnakeYamlOps implements DynamicOps<Node> {
             return super.constructObject(node);
         }
     }
-
-    public static final Hash.Strategy<Node> YAML_NODE_STRATEGY = new Hash.Strategy<>() {
-        @Override
-        public int hashCode(Node o) {
-            if (o instanceof ScalarNode scalarNode) {
-                return scalarNode.getValue().hashCode();
-            }
-            if (o instanceof MappingNode mappingNode) {
-                return Objects.hash((Object[]) mappingNode.getValue().stream().map(NODE_TUPLE_STRATEGY::hashCode).toArray(Integer[]::new));
-            }
-            if (o instanceof SequenceNode sequenceNode) {
-                return Objects.hash((Object[]) sequenceNode.getValue().stream().map(this::hashCode).toArray(Integer[]::new));
-            }
-            return o.hashCode();
-        }
-
-        @Override
-        public boolean equals(Node a, Node b) {
-            if ((a==null) != (b==null)) {
-                return false;
-            }
-            if (a == b) {
-                return true;
-            }
-            return hashCode(a) == hashCode(b);
-        }
-    };
-
-    private static final Hash.Strategy<NodeTuple> NODE_TUPLE_STRATEGY = new Hash.Strategy<NodeTuple>() {
-        @Override
-        public int hashCode(NodeTuple o) {
-            return Objects.hash(YAML_NODE_STRATEGY.hashCode(o.getKeyNode()), YAML_NODE_STRATEGY.hashCode(o.getValueNode()));
-        }
-
-        @Override
-        public boolean equals(NodeTuple a, NodeTuple b) {
-            return YAML_NODE_STRATEGY.equals(a.getKeyNode(), b.getKeyNode()) && YAML_NODE_STRATEGY.equals(a.getValueNode(), b.getValueNode());
-        }
-    };
 }
