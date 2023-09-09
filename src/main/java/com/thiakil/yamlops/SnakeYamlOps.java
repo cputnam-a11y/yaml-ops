@@ -139,9 +139,8 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     private DataResult<Node> mergeToList(Node list, Consumer<List<Node>> additionalNodes) {
         return getSequence(list)
-                .map(SequenceNode::getValue)
                 .map(existing -> {
-                    List<Node> newValues = new ArrayList<>(existing);
+                    List<Node> newValues = new ArrayList<>(existing.getValue());
                     additionalNodes.accept(newValues);
                     return new SequenceNode(Tag.SEQ, newValues, dumperOptions.getDefaultFlowStyle());
                 });
