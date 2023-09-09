@@ -18,6 +18,7 @@ import org.yaml.snakeyaml.resolver.Resolver;
 import org.yaml.snakeyaml.serializer.Serializer;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -104,7 +105,12 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     @Override
     public DataResult<Number> getNumberValue(Node input) {
-        return getScalar(input).map(scalarNode -> (Number) constructor.constructObject(scalarNode));
+        return getScalar(input).map(scalarNode -> {
+            if (scalarNode.getTag() != Tag.INT && scalarNode.getTag() != Tag.FLOAT) {
+                return new BigDecimal(scalarNode.getValue());
+            }
+            return (Number) constructor.constructObject(scalarNode);
+        });
     }
 
     @Override
