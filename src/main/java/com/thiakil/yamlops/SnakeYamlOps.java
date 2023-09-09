@@ -223,6 +223,20 @@ public class SnakeYamlOps implements DynamicOps<Node> {
         );
     }
 
+    @Override
+    public Node createBoolean(boolean value) {
+        return representer.represent(value);
+    }
+
+    @Override
+    public DataResult<Boolean> getBooleanValue(Node input) {
+        return getScalar(input).map(scalarNode -> {
+            scalarNode.setTag(Tag.BOOL);
+            scalarNode.setType(boolean.class);
+            return (Boolean) constructor.constructObject(scalarNode);
+        });
+    }
+
     public void dump(Writer output, Node rootNode) throws IOException {
         Serializer serializer = new Serializer(new Emitter(output, dumperOptions), new Resolver(),
                 dumperOptions, rootNode.getTag());
