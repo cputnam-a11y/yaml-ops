@@ -300,6 +300,11 @@ public class CodecTest {
         testConversionRead(EOYamlOps.INSTANCE, JsonOps.INSTANCE);
     }
 
+    @Test
+    public void testWriteConvertReadSnake() {
+        testConversionRead(new SnakeYamlOps(), JsonOps.INSTANCE);
+    }
+
     private <T> void testDumpParse(final DynamicOps<T> ops, Function<T, String> stringifier, Function<String, T> parser) {
         final TestData data = makeRandomTestData();
 

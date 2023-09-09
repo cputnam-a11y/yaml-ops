@@ -52,7 +52,22 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     @Override
     public <U> U convertTo(DynamicOps<U> outOps, Node input) {
-        throw new UnsupportedOperationException("TODO");
+        if (input instanceof MappingNode mappingNode) {
+            return convertMap(outOps, input);
+        }
+        if (input instanceof SequenceNode sequenceNode) {
+            return convertList(outOps, input);
+        }
+        if (input instanceof ScalarNode scalarNode) {
+            if (scalarNode.getTag() == Tag.BOOL) {
+                return outOps.createBoolean(getBooleanValue(input).get().orThrow());
+            }
+            if (scalarNode.getTag() == Tag.INT || scalarNode.getTag() == Tag.FLOAT) {
+                return outOps.createNumeric(getNumberValue(input).get().orThrow());
+            }
+            return outOps.createString(scalarNode.getValue());
+        }
+        throw new IllegalStateException("Unconvertable Node: "+input);
     }
 
     private DataResult<ScalarNode> getScalar(Node input) {
