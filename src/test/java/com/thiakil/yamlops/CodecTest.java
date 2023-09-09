@@ -1,8 +1,5 @@
 package com.thiakil.yamlops;
 
-import com.amihaiemil.eoyaml.Yaml;
-import com.amihaiemil.eoyaml.YamlMapping;
-import com.amihaiemil.eoyaml.YamlNode;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -251,26 +248,6 @@ public class CodecTest {
         Assertions.assertEquals(DataResult.success(data), decoded, "read(convert(write(x))) == x");
     }
 
-    @Test
-    public void testWriteReadNormal() {
-        testWriteRead(EOYamlOps.INSTANCE);
-    }
-
-    @Test
-    public void testReadWriteNormal() {
-        testReadWrite(EOYamlOps.INSTANCE, Function.identity());
-    }
-
-    @Test
-    public void testWriteConvertRead() {
-        testConversionRead(EOYamlOps.INSTANCE, JsonOps.INSTANCE);
-    }
-
-    @Test
-    public void testWriteConvertReadSnake() {
-        testConversionRead(new SnakeYamlOps(), JsonOps.INSTANCE);
-    }
-
     private <T> void testDumpParse(final DynamicOps<T> ops, Function<T, String> stringifier, Function<String, T> parser) {
         final TestData data = makeRandomTestData();
 
@@ -285,14 +262,8 @@ public class CodecTest {
     }
 
     @Test
-    public void testDumpParseEOYaml() {
-        testDumpParse(EOYamlOps.INSTANCE, YamlNode::toString, s-> {
-            try {
-                return Yaml.createYamlInput(s).readYamlMapping();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
+    public void testWriteConvertReadSnake() {
+        testConversionRead(new SnakeYamlOps(), JsonOps.INSTANCE);
     }
 
     @Test

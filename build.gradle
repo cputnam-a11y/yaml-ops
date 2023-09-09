@@ -13,7 +13,6 @@ repositories {
 }
 
 dependencies {
-    implementation "com.amihaiemil.web:eo-yaml:7.0.9"
     implementation "org.yaml:snakeyaml:1.21"
     implementation 'com.mojang:datafixerupper:6.0.8'
 
