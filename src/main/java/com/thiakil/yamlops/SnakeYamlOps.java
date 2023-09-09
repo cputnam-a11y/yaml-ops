@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.composer.Composer;
 import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.constructor.ConstructorException;
 import org.yaml.snakeyaml.emitter.Emitter;
 import org.yaml.snakeyaml.nodes.*;
 import org.yaml.snakeyaml.parser.ParserImpl;
@@ -105,11 +106,19 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     @Override
     public DataResult<Number> getNumberValue(Node input) {
-        return getScalar(input).map(scalarNode -> {
+        return getScalar(input).flatMap(scalarNode -> {
             if (scalarNode.getTag() != Tag.INT && scalarNode.getTag() != Tag.FLOAT) {
-                return new BigDecimal(scalarNode.getValue());
+                try {
+                    return DataResult.success(new BigDecimal(scalarNode.getValue()));
+                } catch (NumberFormatException e) {
+                    return DataResult.error(e::getMessage);
+                }
             }
-            return (Number) constructor.constructObject(scalarNode);
+            try {
+                return DataResult.success((Number) constructor.constructObject(scalarNode));
+            } catch (ConstructorException e) {
+                return DataResult.error(()->"Deserialisation issue, "+e.getMessage());
+            }
         });
     }
 
@@ -236,10 +245,14 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     @Override
     public DataResult<Boolean> getBooleanValue(Node input) {
-        return getScalar(input).map(scalarNode -> {
+        return getScalar(input).flatMap(scalarNode -> {
             scalarNode.setTag(Tag.BOOL);
             scalarNode.setType(boolean.class);
-            return (Boolean) constructor.constructObject(scalarNode);
+            try {
+                return DataResult.success((Boolean) constructor.constructObject(scalarNode));
+            } catch (ConstructorException e) {
+                return DataResult.error(()->"Deserialisation issue, "+e.getMessage());
+            }
         });
     }
 
