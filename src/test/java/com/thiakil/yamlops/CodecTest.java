@@ -13,7 +13,6 @@ import org.yaml.snakeyaml.nodes.Node;
 import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -279,7 +278,7 @@ public class CodecTest {
     @Test
     public void testDumpParseSnakeYaml() {
         SnakeYamlOps ops = new SnakeYamlOps();
-        testDumpParse(ops, ops::dumpString, ops::load);
+        testDumpParse(ops, YamlHelper::dumpString, YamlHelper::load);
     }
 
     //convert nodes to generic objects, as they natively compare by instance (not contents)

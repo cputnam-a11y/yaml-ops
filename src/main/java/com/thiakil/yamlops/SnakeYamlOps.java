@@ -7,18 +7,11 @@ import com.mojang.serialization.MapLike;
 import com.thiakil.yamlops.util.NodeStrategy;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.composer.Composer;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.constructor.ConstructorException;
-import org.yaml.snakeyaml.emitter.Emitter;
 import org.yaml.snakeyaml.nodes.*;
-import org.yaml.snakeyaml.parser.ParserImpl;
-import org.yaml.snakeyaml.reader.StreamReader;
 import org.yaml.snakeyaml.representer.Representer;
-import org.yaml.snakeyaml.resolver.Resolver;
-import org.yaml.snakeyaml.serializer.Serializer;
 
-import java.io.*;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -29,9 +22,10 @@ import java.util.stream.Stream;
 
 @MethodsReturnNonnullByDefault
 public class SnakeYamlOps implements DynamicOps<Node> {
-    private static final DumperOptions DEFAULT_OPTIONS = new DumperOptions();
+    static final DumperOptions DEFAULT_OPTIONS = new DumperOptions();
     static {
         DEFAULT_OPTIONS.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        DEFAULT_OPTIONS.setLineBreak(DumperOptions.LineBreak.UNIX);
     }
     public static final Collector<NodeTuple, ?, Map<Node, Node>> NODE_TUPLE_COLLECTOR = Collectors.toMap(NodeTuple::getKeyNode, NodeTuple::getValueNode, (m1, m2) -> m2, () -> new Object2ObjectOpenCustomHashMap<>(NodeStrategy.INSTANCE));
 
@@ -253,33 +247,6 @@ public class SnakeYamlOps implements DynamicOps<Node> {
                 return DataResult.error(()->"Deserialisation issue, "+e.getMessage());
             }
         });
-    }
-
-    public void dump(Writer output, Node rootNode) throws IOException {
-        Serializer serializer = new Serializer(new Emitter(output, dumperOptions), new Resolver(),
-                dumperOptions, rootNode.getTag());
-        serializer.open();
-        serializer.serialize(rootNode);
-        serializer.close();
-    }
-
-    public String dumpString(Node rootNode) {
-        StringWriter stringWriter = new StringWriter();
-        try {
-            dump(stringWriter, rootNode);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return stringWriter.toString();
-    }
-
-    public Node load(Reader yaml) {
-        Composer composer = new Composer(new ParserImpl(new StreamReader(yaml)), new Resolver());
-        return composer.getSingleNode();
-    }
-
-    public Node load(String yaml) {
-        return load(new StringReader(yaml));
     }
 
     private static class MyConstructor extends Constructor {
