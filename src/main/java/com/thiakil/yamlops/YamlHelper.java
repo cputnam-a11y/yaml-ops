@@ -12,6 +12,7 @@ import org.yaml.snakeyaml.serializer.Serializer;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 public class YamlHelper {
     public static void dump(Writer output, Node rootNode, DumperOptions dumperOptions) throws IOException {
@@ -54,8 +55,13 @@ public class YamlHelper {
             );
         }
         if (rootNode instanceof MappingNode mappingNode) {
-            ArrayList<NodeTuple> sortedList = new ArrayList<>(mappingNode.getValue());
-            sortedList.sort(Comparator.comparing(t->((ScalarNode)t.getKeyNode()).getValue(), keyComparator));
+            List<NodeTuple> sortedList = mappingNode.getValue().stream()
+                    //recurse to map values
+                    .map(t->new NodeTuple(t.getKeyNode(), sortMappingKeys(t.getValueNode(), keyComparator)))
+                    //sort the keys
+                    .sorted(Comparator.comparing(t->((ScalarNode)t.getKeyNode()).getValue(), keyComparator))
+                    //add to new list
+                    .toList();
             return new MappingNode(mappingNode.getTag(), sortedList, mappingNode.getFlowStyle());
         }
         if (rootNode instanceof AnchorNode anchorNode) {
