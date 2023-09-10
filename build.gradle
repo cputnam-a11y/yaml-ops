@@ -1,10 +1,10 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'maven-publish'
 }
 
 group = 'com.thiakil'
-version = '1.0-SNAPSHOT'
+version = '1.0.1'
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of("17")
@@ -19,7 +19,7 @@ repositories {
 }
 
 dependencies {
-    implementation "org.yaml:snakeyaml:1.21"
+    api "org.yaml:snakeyaml:1.21"
     implementation 'com.mojang:datafixerupper:6.0.8'
 
     testImplementation platform('org.junit:junit-bom:5.9.1')
@@ -36,11 +36,20 @@ artifacts {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/thiakil/yaml-ops")
+            credentials {
+                username = project.findProperty("yamlops.gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("yamlops.gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+        mavenLocal()
+    }
     publications {
         yamlOps(MavenPublication) {
             from components.java
         }
     }
-
-
 }
