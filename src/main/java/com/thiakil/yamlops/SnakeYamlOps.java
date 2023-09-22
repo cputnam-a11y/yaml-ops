@@ -7,6 +7,7 @@ import com.mojang.serialization.MapLike;
 import com.thiakil.yamlops.util.NodeStrategy;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.constructor.ConstructorException;
 import org.yaml.snakeyaml.nodes.*;
@@ -36,7 +37,7 @@ public class SnakeYamlOps implements DynamicOps<Node> {
 
     public SnakeYamlOps(DumperOptions dumperOptions) {
         this.dumperOptions = dumperOptions;
-        representer = new Representer();
+        representer = new Representer(dumperOptions);
         representer.setDefaultFlowStyle(dumperOptions.getDefaultFlowStyle());
         representer.setDefaultScalarStyle(dumperOptions.getDefaultScalarStyle());
         EMPTY = representer.represent(null);
@@ -250,6 +251,10 @@ public class SnakeYamlOps implements DynamicOps<Node> {
     }
 
     private static class MyConstructor extends Constructor {
+        MyConstructor() {
+            super(new LoaderOptions());
+        }
+
         @Override
         public Object constructObject(Node node) {
             return super.constructObject(node);

@@ -1,6 +1,7 @@
 package com.thiakil.yamlops;
 
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.composer.Composer;
 import org.yaml.snakeyaml.emitter.Emitter;
 import org.yaml.snakeyaml.nodes.*;
@@ -38,7 +39,8 @@ public class YamlHelper {
     }
 
     public static Node load(Reader yaml) {
-        Composer composer = new Composer(new ParserImpl(new StreamReader(yaml)), new Resolver());
+        LoaderOptions loaderOptions = new LoaderOptions();
+        Composer composer = new Composer(new ParserImpl(new StreamReader(yaml), loaderOptions), new Resolver(), loaderOptions);
         return composer.getSingleNode();
     }
 
