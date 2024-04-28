@@ -1,10 +1,7 @@
 package com.thiakil.yamlops;
 
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
-import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -142,7 +139,11 @@ public class CodecTest {
         }
     }
 
-    private record  TestData(float a, double b, byte c, short d, int e, long f, boolean g, String h, List<String> i, Map<String, String> j, List<Pair<String, String>> k, DayData dayData) {
+    private record SubData(String subField){
+        static final MapCodec<SubData> CODEC = RecordCodecBuilder.mapCodec(i->i.group(Codec.STRING.fieldOf("subField").forGetter(SubData::subField)).apply(i, SubData::new));
+    }
+
+    private record  TestData(float a, double b, byte c, short d, int e, long f, boolean g, String h, List<String> i, Map<String, String> j, List<Pair<String, String>> k, DayData dayData, SubData subData) {
         public static final Codec<TestData> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.FLOAT.fieldOf("a").forGetter(d -> d.a),
                 Codec.DOUBLE.fieldOf("b").forGetter(d -> d.b),
@@ -155,7 +156,8 @@ public class CodecTest {
                 Codec.STRING.listOf().fieldOf("i").forGetter(d -> d.i),
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).fieldOf("j").forGetter(d -> d.j),
                 Codec.compoundList(Codec.STRING, Codec.STRING).fieldOf("k").forGetter(d -> d.k),
-                DayData.CODEC.fieldOf("day_data").forGetter(d -> d.dayData)
+                DayData.CODEC.fieldOf("day_data").forGetter(d -> d.dayData),
+                SubData.CODEC.forGetter(TestData::subData)
         ).apply(i, TestData::new));
 
         @Override
@@ -213,7 +215,8 @@ public class CodecTest {
                         .mapToObj(i -> Pair.of(Float.toString(random.nextFloat()), Float.toString(random.nextFloat())))
                         .collect(Collectors.toList()
                         ),
-                new WednesdayData("meetings lol"));
+                new WednesdayData("meetings lol"),
+                new SubData("mySubFieldData"));
     }
 
     private <T> void testWriteRead(final DynamicOps<T> ops) {
@@ -254,6 +257,7 @@ public class CodecTest {
             throw new RuntimeException(e);
         });
         String dumped = stringifier.apply(encoded);
+        //System.out.println(dumped);
         T rootNode = parser.apply(dumped);
         DataResult<TestData> parsed = TestData.CODEC.parse(ops, rootNode);
 
