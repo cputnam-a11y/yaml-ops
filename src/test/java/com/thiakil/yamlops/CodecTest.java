@@ -26,14 +26,14 @@ public class CodecTest {
         public static final Codec<Day> CODEC = Codec.STRING.comapFlatMap(DataResult.partialGet(BY_NAME::get, () -> "unknown day"), d -> d.name);
 
         private final String name;
-        private final Codec<? extends DayData> codec;
+        private final MapCodec<? extends DayData> codec;
 
-        Day(final String name, final Codec<? extends DayData> codec) {
+        Day(final String name, final MapCodec<? extends DayData> codec) {
             this.name = name;
             this.codec = codec;
         }
 
-        public Codec<? extends DayData> codec() {
+        public MapCodec<? extends DayData> codec() {
             return codec;
         }
     }
@@ -44,7 +44,7 @@ public class CodecTest {
     }
 
     private static final class TuesdayData implements DayData {
-        public static final Codec<TuesdayData> CODEC = Codec.INT.xmap(TuesdayData::new, d -> d.x);
+        public static final MapCodec<TuesdayData> CODEC = Codec.INT.xmap(TuesdayData::new, d -> d.x).fieldOf("x");
 
         private final int x;
 
@@ -76,7 +76,7 @@ public class CodecTest {
     }
 
     private static final class WednesdayData implements DayData {
-        public static final Codec<WednesdayData> CODEC = Codec.STRING.xmap(WednesdayData::new, d -> d.y);
+        public static final MapCodec<WednesdayData> CODEC = Codec.STRING.xmap(WednesdayData::new, d -> d.y).fieldOf("y");
 
         private final String y;
 
@@ -108,7 +108,7 @@ public class CodecTest {
     }
 
     private static final class SundayData implements DayData {
-        public static final Codec<SundayData> CODEC = Codec.FLOAT.xmap(SundayData::new, d -> d.z);
+        public static final MapCodec<SundayData> CODEC = Codec.FLOAT.xmap(SundayData::new, d -> d.z).fieldOf("z");
 
         private final float z;
 
@@ -253,9 +253,7 @@ public class CodecTest {
     private <T> void testDumpParse(final DynamicOps<T> ops, Function<T, String> stringifier, Function<String, T> parser) {
         final TestData data = makeRandomTestData();
 
-        final T encoded = TestData.CODEC.encodeStart(ops, data).getOrThrow(false, e -> {
-            throw new RuntimeException(e);
-        });
+        final T encoded = TestData.CODEC.encodeStart(ops, data).getOrThrow();
         String dumped = stringifier.apply(encoded);
         //System.out.println(dumped);
         T rootNode = parser.apply(dumped);

@@ -62,10 +62,10 @@ public class SnakeYamlOps implements DynamicOps<Node> {
         }
         if (input instanceof ScalarNode scalarNode) {
             if (scalarNode.getTag() == Tag.BOOL) {
-                return outOps.createBoolean(getBooleanValue(input).get().orThrow());
+                return outOps.createBoolean(getBooleanValue(input).getOrThrow());
             }
             if (scalarNode.getTag() == Tag.INT || scalarNode.getTag() == Tag.FLOAT) {
-                return outOps.createNumeric(getNumberValue(input).get().orThrow());
+                return outOps.createNumeric(getNumberValue(input).getOrThrow());
             }
             return outOps.createString(scalarNode.getValue());
         }
