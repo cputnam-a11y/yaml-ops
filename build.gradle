@@ -12,11 +12,11 @@ java {
 }
 
 jar {
-    manifest {
-        attributes([
-                'FMLModType': 'LIBRARY'
-        ])
-    }
+    // manifest {
+    //     attributes([
+    //             'FMLModType': 'LIBRARY'
+    //     ])
+    // }
 }
 
 repositories {
@@ -45,14 +45,14 @@ artifacts {
 
 publishing {
     repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/thiakil/yaml-ops")
-            credentials {
-                username = project.findProperty("yamlops.gpr.user") ?: System.getenv("USERNAME")
-                password = project.findProperty("yamlops.gpr.key") ?: System.getenv("TOKEN")
-            }
-        }
+        // maven {
+        //     name = "GitHubPackages"
+        //     url = uri("https://maven.pkg.github.com/thiakil/yaml-ops")
+        //     credentials {
+        //         username = project.findProperty("yamlops.gpr.user") ?: System.getenv("USERNAME")
+        //         password = project.findProperty("yamlops.gpr.key") ?: System.getenv("TOKEN")
+        //     }
+        // }
         mavenLocal()
     }
     publications {
